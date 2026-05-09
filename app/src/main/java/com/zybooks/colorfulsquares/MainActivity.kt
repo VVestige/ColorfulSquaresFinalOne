@@ -7,12 +7,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -64,6 +66,10 @@ fun ColorsScreen(modifier: Modifier = Modifier) {
         Color.Green
     )
     var colors by remember { mutableStateOf(baseColors) }
+    var flashDuration by remember { mutableStateOf(500L)}
+    var pauseDuration by remember { mutableStateOf(300L) }
+    var activeIndex by remember { mutableStateOf(-1) }
+    var score by remember { mutableStateOf(0) }
     var isRunning by remember { mutableStateOf(false) }
     var randomMode by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -71,26 +77,59 @@ fun ColorsScreen(modifier: Modifier = Modifier) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Colors!") },
-                actions = {}
+                title = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Reaction!",
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        Text(
+                            text = "Score: $score",
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        Button(
+                            onClick ={
+                                score = 0
+                            }
+                        ) {
+                            Text("Reset")
+                        }
+                    } },
             )
         }
     ) { innerPadding ->
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceEvenly,
-            modifier = modifier.fillMaxSize().padding(innerPadding).background(color = Color.Black)
+            modifier = modifier.fillMaxSize().padding(innerPadding).background(color = Color.LightGray)
         ) {
             Column(){
                 Row() {
-                    ColorBox(colors[0])
+                    ColorBox(colors[0],
+                        onCorrectClick = {
+                            score++
+                        })
                     Spacer(modifier = Modifier.width(10.dp))
-                    ColorBox(colors[1])
+                    ColorBox(colors[1],
+                        onCorrectClick = {
+                            score++
+                        })
                 }
                 Row(){
-                    ColorBox(colors[2])
+                    ColorBox(colors[2],
+                        onCorrectClick = {
+                            score++
+                        })
                     Spacer(modifier = Modifier.width(10.dp))
-                    ColorBox(colors[3])
+                    ColorBox(colors[3],
+                        onCorrectClick = {
+                            score++
+                        })
                 }
             }
             Spacer(modifier = Modifier.height(30.dp))
@@ -99,6 +138,10 @@ fun ColorsScreen(modifier: Modifier = Modifier) {
                 onClick = {
                     isRunning = !isRunning
                     if(isRunning){
+                        score = 0
+                        flashDuration = 500L
+                        pauseDuration = 300L
+
                         coroutineScope.launch {
                             var index = 0
                             while(isRunning) {
@@ -111,15 +154,24 @@ fun ColorsScreen(modifier: Modifier = Modifier) {
                                 val tempList = colors.toMutableList()
                                 tempList[index] = Color.White
                                 colors = tempList
-                                delay(300)
+                                delay(flashDuration)
 
                                 //Restoring color
                                 tempList[index] = baseColors[index]
                                 colors = tempList
-                                delay(300)
+                                activeIndex = -1
+                                delay(pauseDuration)
 
                                 if(!randomMode) {
                                     index++
+                                }
+
+                                if(flashDuration > 120L) {
+                                    flashDuration -= 10L
+                                }
+
+                                if(pauseDuration > 80L) {
+                                    pauseDuration -= 5L
                                 }
                             }
 
@@ -128,8 +180,8 @@ fun ColorsScreen(modifier: Modifier = Modifier) {
                 }
             ) {
                 Text(
-                    if (isRunning) "Stop Sequence"
-                    else "Start Sequence"
+                    if (isRunning) "Stop Game"
+                    else "Start Game"
                 )
             }
             Spacer(modifier = Modifier.height(20.dp))
@@ -151,8 +203,12 @@ fun ColorsScreen(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun ColorBox(clr: Color) {
+fun ColorBox(clr: Color, onCorrectClick: ()-> Unit) {
     Box(
-        modifier = Modifier.size(120.dp).background(clr)
+        modifier = Modifier.size(120.dp).background(clr).clickable{
+            if(clr == Color.White) {
+                onCorrectClick()
+            }
+        }
     )
 }
